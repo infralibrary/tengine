@@ -3,8 +3,7 @@ name: $(SourceBranchName)-$(tag)-$(Date:yyyyMMdd)$(Rev:.r)
 trigger:
   branches:
     include:
-    - master
-    - releases/*
+    - release
   paths:
     exclude:
     - docs
