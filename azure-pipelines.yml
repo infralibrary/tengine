@@ -1,13 +1,7 @@
 name: $(SourceBranchName)-$(tag)-$(Date:yyyyMMdd)$(Rev:.r)
 
-trigger:
-  branches:
-    include:
-    - release
-  paths:
-    exclude:
-    - docs
-    - '*.md'
+trigger: none
+pr: none
 
 resources:
 - repo: self
