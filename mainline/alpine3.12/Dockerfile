@@ -191,6 +191,8 @@ RUN  export TENGINE_VERSION='2.3.3' \
           && rm -rf /root/.cache \
           && rm -rf /tmp/*
 
+COPY modules.conf /app/tengine/modules/modules.conf
+
 COPY --chown=nginx:nginx nginx.conf /app/tengine/conf/nginx.conf
 
 EXPOSE 8080
