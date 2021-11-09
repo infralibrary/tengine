@@ -45,15 +45,20 @@ stages:
                                                                         -t $(ALIYUN_REGISTRY_URL)/infralibrary/tengine:$(tag) \
                                                                         -t $(ALIYUN_REGISTRY_URL)/infralibrary/tengine:latest .
           docker images 
-    - task: Bash@3
-      displayName: Registry Login
-      enabled: "true"
+    - task: Docker@2
+      displayName: Login Docker Registry
       inputs:
-        targetType: 'inline'
-        script: |
-          #!/bin/bash
-          docker login -u $(DOCKER_REGISTRY_USERNAME) -p $(DOCKER_REGISTRY_PASSWORD)
-          docker login $(ALIYUN_REGISTRY_URL) -u $(ALIYUN_REGISTRY_USERNAME) -p $(ALIYUN_REGISTRY_PASSWORD)
+        containerRegistry: 'docker.io'
+        command: login
+        addPipelineData: false
+        addBaseImageData: false
+    - task: Docker@2
+      displayName: Login Aliyun Registry
+      inputs:
+        containerRegistry: 'registry.aliyuncs.com'
+        command: login
+        addPipelineData: false
+        addBaseImageData: false
     - task: Bash@3
       displayName: Push image
       enabled: "true"
@@ -84,3 +89,4 @@ stages:
             docker rmi -f ${reg}/infralibrary/tengine:$(tag)
             docker rmi -f ${reg}/infralibrary/tengine:latest
           done
+...
