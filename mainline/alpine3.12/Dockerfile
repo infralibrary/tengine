@@ -189,6 +189,9 @@ RUN  export TENGINE_VERSION='2.3.3' \
           # Bring in tzdata so users could set the timezones through the environment
           # variables
           && apk add --no-cache tzdata \
+          \
+          # Bring in curl and ca-certificates to make registering on DNS SD easier
+          && apk add --no-cache curl ca-certificates \
           && rm -rf /var/cache/apk/* \
           && rm -rf /root/.cache \
           && rm -rf /tmp/*
