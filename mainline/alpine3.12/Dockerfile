@@ -2,19 +2,19 @@ FROM alpine:3.12
 
 RUN  export TENGINE_VERSION='2.3.3' \
      && export CONFIG="\
-          --prefix=/app/tengine \
+          --prefix=/etc/nginx \
           --sbin-path=/usr/sbin/nginx \
-          --modules-path=/app/tengine/modules \
-          --conf-path=/app/tengine/conf/nginx.conf \
-          --error-log-path=/app/tengine/logs/error.log \
-          --http-log-path=/app/tengine/logs/access.log \
-          --pid-path=/app/tengine/pid/nginx.pid \
-          --lock-path=/app/tengine/lock/nginx.lock \
-          --http-client-body-temp-path=/app/tengine/temp/client_temp \
-          --http-proxy-temp-path=/app/tengine/temp/proxy_temp \
-          --http-fastcgi-temp-path=/app/tengine/temp/fastcgi_temp \
-          --http-uwsgi-temp-path=/app/tengine/temp/uwsgi_temp \
-          --http-scgi-temp-path=/app/tengine/temp/scgi_temp \
+          --modules-path=/usr/lib/nginx/modules \
+          --conf-path=/etc/nginx/nginx.conf \
+          --error-log-path=/var/log/nginx/error.log \
+          --http-log-path=/var/log/nginx/access.log \
+          --pid-path=/var/run/nginx.pid \
+          --lock-path=/var/run/nginx.lock \
+          --http-client-body-temp-path=/var/cache/nginx/client_temp \
+          --http-proxy-temp-path=/var/cache/nginx/proxy_temp \
+          --http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp \
+          --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp \
+          --http-scgi-temp-path=/var/cache/nginx/scgi_temp \
           --user=nginx \
           --group=nginx \
           --with-http_ssl_module \
@@ -30,19 +30,19 @@ RUN  export TENGINE_VERSION='2.3.3' \
           --with-http_secure_link_module \
           --with-http_stub_status_module \
           --with-http_auth_request_module \
-          --with-http_xslt_module=dynamic \
-          --with-http_image_filter_module=dynamic \
-          --with-http_geoip_module=dynamic \
-          --with-http_perl_module=dynamic \
+          --with-http_xslt_module \
+          --with-http_image_filter_module \
+          --with-http_geoip_module \
+          --with-http_perl_module \
           --with-threads \
-          --with-stream=dynamic \
+          --with-stream \
           --with-stream_sni \
           --with-stream_ssl_module \
           --with-stream_ssl_preread_module \
           --with-stream_realip_module \
-          --with-stream_geoip_module=dynamic \
+          --with-stream_geoip_module \
           --with-http_slice_module \
-          --with-mail=dynamic \
+          --with-mail \
           --with-mail_ssl_module \
           --with-compat \
           --with-file-aio \
@@ -63,11 +63,11 @@ RUN  export TENGINE_VERSION='2.3.3' \
           --add-module=modules/nginx-limit-speed-module \
           --add-module=modules/ngx_devel_kit-0.3.1 \
           --add-module=modules/ngx_brotli \
-          --add-dynamic-module=modules/ngx_slab_stat \
-          --add-dynamic-module=modules/ngx_debug_pool \
-          --add-dynamic-module=modules/nginx-auth-ldap \
-          --add-dynamic-module=modules/lua-nginx-module-0.10.14 \
-          --add-dynamic-module=modules/nginx-module-vts-0.1.18 \
+          --add-module=modules/ngx_slab_stat \
+          --add-module=modules/ngx_debug_pool \
+          --add-module=modules/nginx-auth-ldap \
+          --add-module=modules/lua-nginx-module-0.10.14 \
+          --add-module=modules/nginx-module-vts-0.1.18 \
           " \
           && rm -rf /var/cache/apk/* \
           && rm -rf /tmp/* \
@@ -156,15 +156,17 @@ RUN  export TENGINE_VERSION='2.3.3' \
      && ./configure $CONFIG \
           && make -j$(getconf _NPROCESSORS_ONLN) \
           && make install \
+          && rm -rf /etc/nginx/html/ \
+          && mkdir -p /usr/share/nginx/html /etc/nginx/conf.d /var/cache/nginx /var/log/nginx \
+          && install -m644 html/index.html /usr/share/nginx/html/index.html \
+          && install -m644 html/50x.html /usr/share/nginx/html/50x.html \
           && strip /usr/sbin/nginx* \
-          && strip /app/tengine/modules/*.so \
           && rm -rf /usr/src \
-          && mkdir -p /app/tengine/conf.d /app/tengine/temp /app/tengine/pid /app/tengine/lock /app/tengine/logs \
           \
           # forward request and error logs to docker log collector
-          && ln -sf /dev/stdout /app/tengine/logs/access.log \
-          && ln -sf /dev/stderr /app/tengine/logs/error.log \
-          && chown -Rf nginx:nginx /app/tengine/conf /app/tengine/conf.d /app/tengine/html /app/tengine/temp /app/tengine/pid /app/tengine/lock /app/tengine/logs \
+          && ln -sf /dev/stdout /var/log/nginx/access.log \
+          && ln -sf /dev/stderr /var/log/nginx/error.log \
+          && chown -Rf nginx:nginx /var/cache/nginx /var/log/nginx \
           \
           # Bring in gettext so we can get `envsubst`, then throw
           # the rest away. To do this, we need to install `gettext`
@@ -174,7 +176,7 @@ RUN  export TENGINE_VERSION='2.3.3' \
           && mv /usr/bin/envsubst /tmp/ \
           \
           && runDeps="$( \
-                    scanelf --needed --nobanner --format '%n#p' /usr/sbin/nginx /app/tengine/modules/*.so /usr/local/lib/*.so /tmp/envsubst \
+                    scanelf --needed --nobanner --format '%n#p' /usr/sbin/nginx /usr/local/lib/*.so /tmp/envsubst \
                          | tr ',' '\n' \
                          | sort -u \
                          | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
@@ -191,14 +193,13 @@ RUN  export TENGINE_VERSION='2.3.3' \
           && rm -rf /root/.cache \
           && rm -rf /tmp/*
 
-COPY modules.conf /app/tengine/modules/modules.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
-COPY --chown=nginx:nginx nginx.conf /app/tengine/conf/nginx.conf
+COPY default.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 8080
+EXPOSE 80
 
 STOPSIGNAL SIGTERM
 
-USER nginx
-
 CMD ["nginx", "-g", "daemon off;"]
+
